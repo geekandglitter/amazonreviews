@@ -39,22 +39,56 @@ def showlink(request):
 ###################################################
 def home(request):
     import pyderman as cdi
+    from selenium.webdriver.common.touch_actions import TouchActions
+
     path = cdi.install(file_directory='c:\\data\\chromedriver\\', verbose=True, chmod=True, overwrite=False,
                        version=None)
     from selenium import webdriver
     from selenium.webdriver.common.keys import Keys
+    from selenium.webdriver.support.ui import WebDriverWait
     options = webdriver.ChromeOptions()
     options.add_argument("--ignore-certificate-errors")
     #options.add_argument("headless")
     driver = webdriver.Chrome("c:\\data\\chromedriver\\chromedriver.exe", chrome_options=options)
+    driver.implicitly_wait(100)
     #driver.set_page_load_timeout(2)
 
-    r = driver.get("https://www.amazon.com/gp/profile/amzn1.account.AG7BVCPAJAA55B2TAVXEEKUDBSVA?preview=true")
+    driver.get("https://www.amazon.com/gp/profile/amzn1.account.AG7BVCPAJAA55B2TAVXEEKUDBSVA?preview=true")
+    #data = driver.find_element_by_class_name('a-profile-content')
 
-    page_source = driver.page_source
-    soup = BeautifulSoup(page_source, 'lxml')
-    #i = 1
-    #while i==i:
-     #   i=1
-    return render(request, 'gohere.html', {'done': 'done'})
+    scroll(driver, 30)
+    # Once scroll returns bs4 parsers the page_source
+    soup = BeautifulSoup(driver.page_source, 'lxml') #lxml is faster than html
+    # Them we close the driver as soup_a is storing the page source
+    driver.close()
 
+    # Empty array to store the links
+    links = []
+    # Looping through all the a elements in the page source
+    for link in soup.find_all('a'):
+        link.get('href')
+        links.append(link.get('href'))
+    return render(request, 'gohere.html', {'done': links})
+
+###################################################
+
+def scroll(driver, timeout):
+    scroll_pause_time = timeout
+
+    # Get scroll height
+    last_height = driver.execute_script("return document.body.scrollHeight")
+
+    while True:
+        # Scroll down to bottom
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+        # Wait to load page
+        import time
+        time.sleep(scroll_pause_time)
+
+        # Calculate new scroll height and compare with last scroll height
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            # If heights are the same it will exit the function
+            break
+        last_height = new_height
